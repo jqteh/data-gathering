@@ -1,95 +1,96 @@
-# -*- coding: cp1250 -*-
 import pandas as pd
-import numpy as np
-from django.utils.encoding import smart_str, smart_unicode
+from bs4 import BeautifulSoup
+import re
+import string
+import time
+import datetime
 
-sve = []
-svi_postovi = []
-sadrzaj = []
-komentari= []
+for i in range (0, 20):
+	now = time.strftime("%Y.%m.%d. %H-%M")
+	start_time = time.time()
 
-# Create URL to JSON file (alternatively this can be a filepath)
-url = 'http://a.4cdn.org/biz/threads.json'
-# Load the first sheet of the JSON file into a data frame
-df = pd.read_json(url, orient='columns')
+	sve = []
+	sadrzaj = []
+	komentari_svi= []
 
-#ucitavanje threadova sa stranica od 0 do 11
-for i in range (0, 11):   
-    data = df.threads[i]  
-    rez = pd.DataFrame.from_dict(data)    
-    sve.append(rez)
-#tablica formata index, last_modified, no
-all_nos = pd.concat(sve, ignore_index=True)
-df1 = pd.DataFrame.from_dict(all_nos)
+	komentari = []
+	table = string.maketrans("","")
 
-print(type(sve))
-print(type(all_nos))
-print(type(df1))
+	url = 'http://a.4cdn.org/biz/threads.json'
+	df = pd.read_json(url, orient='columns')
 
+	#ucitavanje threadova 
+	for i in range (0, len(df)):   
+		data = df.threads[i]  
+		rez = pd.DataFrame.from_dict(data)    
+		sve.append(rez)
+		
+	all_nos = pd.concat(sve, ignore_index=True)
+	df1 = pd.DataFrame.from_dict(all_nos)
 
-print("\n OBRADA SADRZAJA " + str(len(df1)) + " threadova  \n" )
+	print("\nreading " + str(len(df1)) + " threads.  \n" )
 
-for i in range (0, len(df1)):    
-    #uzimam id i dodajem u url
-    broj = str(df1.no[i])   
-    thread_url = "https://a.4cdn.org/biz/thread/" + broj + ".json" 
-    #uzimanje podataka od threada
-    print("thread > " + str(i) + ", ID threada > " + broj )
-    df2 = pd.read_json(thread_url, orient='columns')
-    for j in range (0, len(df2)):
-        data1 = df2.posts[j]
-        sadrzaj.append(data1)
-        
-    
-    print("broj komentara > " + str(len(data1)) + "\n")
-    
+	for i in range (0, len(df1)):    
+		#uzimam id i dodajem u url
+		broj = str(df1.no[i])   
+		thread_url = "https://a.4cdn.org/biz/thread/" + broj + ".json" 
+		#uzimanje podataka od threada
+		df2 = pd.read_json(thread_url, orient='columns')
+		for j in range (0, len(df2)):
+			data1 = df2.posts[j]
+			sadrzaj.append(data1)
 
+	#pristupanje pojedinom komentaru 
+	for i in range (0, len(sadrzaj)):
+			data2 = sadrzaj[i]
+			komentari_svi.append(data2)
+	   
+	#pretvaranje u data frame
+	df2 = pd.DataFrame.from_dict(sadrzaj)
+	df2.to_csv('komentari.csv', sep=' ', encoding='utf-8')
 
+	print("reading time %s seconds " % (time.time() - start_time))
+	print("\nnumber of com " + str(len(komentari_svi)))
 
-print("\n sadrzaj obraden \n")
-#info
-print("\n TIP > " + str(type(sadrzaj)) +  "\n")
-print("\n broj stupaca > " + str(len(sadrzaj[0])) +  "\n")
-print("\n broj redaka > " + str(len(sadrzaj)) +  "\n")
+	#----------------------clearing data---------------------------------------------------
 
-#pristupanje pojedinom komentaru
-for i in range (0, len(sadrzaj)):
-        data2 = sadrzaj[i]
-        komentari.append(data2)
-        
-print("\n komentari obradeni- \n")
-print("\n ukupni broj KOMENTARA -> " + str(len(komentari)) +  "\n")
-print("\n  komentari obradeni \n")
-print("\n PRETVARANJE U DATA FRAME \n")
-"""
-    no - integer 	Post number 	1-9999999999999
-    now - string 	Date and time 	MM/DD/YY(Day)HH:MM (:SS on some boards), EST/EDT timezone
-    sub - string 	Subject 	text
-    com - string 	Comment 	text (includes escaped HTML)
-    ID - string 	ID 	text (8 characters), Mod, Admin, Manager, Developer, Founder
-    replies
-    unique_ips
-"""
-df2 = pd.DataFrame.from_dict(sadrzaj)
-print("\n tip sadrzaja i data framea \n")
-print(type(sadrzaj))
-print(type(df2))
-print(len(df2))
+	df = pd.read_csv('komentari.csv', delimiter=' ')
 
-comm =(df2['com'])
-print("\n uspjesno pretvoreno u data frame")
+	for i in range (0, len(df)):
+		data = df.com[i]
+		komentari.append(data)
 
-print("tip podataka" + str(type(comm)))
-     
-comm.to_csv('komentari.csv', sep='\n', encoding='utf-8')
-"""
-with open('komentari.txt', 'w') as f:
-    for item in comm:
-        f.write(str(item))
-f.close()
-"""
-print("\n pohranjeno u datoteku \n")
+	for i in range (0, len(komentari)):
+		data = komentari[i]
+		sadrzaj.append(data)
 
-  
+	sadrzaj = str(sadrzaj)
+	"""
+	sadrzaj = '\n'.join(komentari)
+	print(sadrzaj)
+	"""
+	#convert from html to text
+	cleantext = BeautifulSoup(sadrzaj).text
+	#removing id of replies
+	final = re.sub(">>\d+", "", cleantext)
+	final = re.sub("\d\d\d\d\d+", "", cleantext)
+	final = re.sub(">", "", final)
+	final = re.sub(r'[^\w\s]',' ',final)
+	final = re.sub(" {2,}",' ',final)
+	final = final.lower()
+	print(type(final))
+	print("komentari procisceni")
+
+	file = open('komentarii %s.txt' % now, 'w')
+	file.write(final.encode('utf-8'))
+	file.close()
+
+	print('procisceni komentari uspijesno pohranjeni u .txt :)')
+	print(len(final))
+	print("--- %s seconds ---" % (time.time() - start_time))
+	time.sleep(60*10)
+
+print('komentari preuzeti')
+
 
 
