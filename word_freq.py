@@ -1,9 +1,14 @@
 import re
 import string
 import pandas as pd
+from nltk.corpus import stopwords
 
 frequency = {}
-document_text = open('komentarii 2018.10.11. 20-59.txt', 'r')
+document_text = open('procisceni/komentari14.10.2018 14-37.txt', 'r')
+
+en_stops = set(stopwords.words('english'))
+all_words = document_text
+
 text_string = document_text.read()
 match_pattern = re.findall(r'\b[a-z]{3,15}\b', text_string)
  
@@ -16,83 +21,59 @@ frequency_list = sorted(frequency_list)
 
 broj = (len (frequency_list))
 
+#get coin name and symbol from cmc
 url = 'https://api.coinmarketcap.com/v1/ticker/?limit=200'
 df = pd.read_json(url, orient='columns')
 df1 = df[['name','symbol']]
 
+ranks = []
+names = []
+percents = []
 
 for i in range (0, len(df1)):
     ime = df['name'][i].lower()
-    for j in range (0, len(frequency_list)):
-        if (ime == frequency_list[j]):
+    simbol = df['symbol'][i].lower()
+    rank = i+1
+    
+    for j in range (0, len(frequency_list)):  
+        if ime == frequency_list[j]:
             a = (frequency[frequency_list[j]])
             b =  broj
             c = (((a*1.0) / b) * 100)
-            if ( c >= 0.1):
-                print (ime + " ")
-                print(str(c) + "%")
-                print('\n')
+            c = '%.2f' % c
+            ranks.append(rank)
+            names.append(ime)
+            percents.append(c)
                 
-                
-    
-        
-    
-    
-    
+        if simbol == frequency_list[j]:
+            a = (frequency[frequency_list[j]])
+            b =  broj
+            c = (((a*1.0) / b) * 100)
+            c = '%.2f' % c
+            ranks.append(rank)
+            names.append(simbol)
+            percents.append(c)
+
+df = pd.DataFrame({'a-rank':ranks, 'b-names':names, 'c-percents':percents})
+broj = len(df)+1
+for i in range (0, broj):
+    if (df['a-rank'][i] == df['a-rank'][i+1]):
+        print  df['b-names'][i]
+    else:
+        print " nisu isti" 
+"""    
+    print df['a-rank'][i]
+    print df['a-rank'][i+1]
 
 
-"""
-    
-    print(frequency_list[i])
+    if (df['a-rank'][i] == df['a-rank'][i+1] and df['b-names'][i] == df['b-names'][i+1]):
+        zajednicki_postotak = df['c-percents'][i] + df['c-percents'][i+1]
+        print df['b-names'][i] + zajednicki_postotak
+"""       
+#df['b-names'][i]
+#df['c-percents'][i]
+#print df['b-names'][0]
 
 
-for words in frequency_list:
-
-if (words == df['name']):
-        print words, frequency[words]
-        print frequency[words]
-        print broj
-        print type(frequency[words])
-        print type(broj)
-        a = (frequency[words])
-        b =  broj
-        c = (((a*1.0) / b) * 100)
-        print(str(c) + "%")    
-    
-        
-        
-
-wordstring = open('procisceni.txt', 'r')
-wordstring = wordstring.read()
-wordstring = str(wordstring)
-
-wordlist = wordstring.split()
-
-wordfreq = []
-for w in wordlist:
-    wordfreq.append(wordlist.count(w))
-
-#print(wordstring)
-#print(wordlist)
-print(wordfreq)
-   
-print(len(wordstring))
-print(len(wordlist))
-print(len(wordfreq))
-
-print(type(wordstring))
-print(type(wordlist))
-print(type(wordfreq))
 
 
-file = open('freq.txt','w') 
-file = str(file)
-file.write(wordfreq) 
- 
-file.close() 
-
-print("String\n" + wordstring +"\n")
-print("List\n" + str(wordlist) + "\n")
-print("Frequencies\n" + str(wordfreq) + "\n")
-print("Pairs\n" + str(zip(wordlist, wordfreq)))
-"""
